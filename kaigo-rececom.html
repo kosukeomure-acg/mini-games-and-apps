@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>介護保険レセプトコンピュータ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Meiryo', 'Hiragino Kaku Gothic Pro', sans-serif;
+            background: #f0f4f8;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a5276 0%, #2980b9 100%);
+            color: #fff;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: normal;
+        }
+
+        .header-info {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+
+        .container {
+            display: flex;
+            height: calc(100vh - 60px);
+        }
+
+        .sidebar {
+            width: 220px;
+            background: #2c3e50;
+            padding: 20px 0;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            padding: 15px 25px;
+            color: #ecf0f1;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .sidebar-menu li:hover {
+            background: #34495e;
+        }
+
+        .sidebar-menu li.active {
+            background: #34495e;
+            border-left-color: #3498db;
+        }
+
+        .sidebar-menu li i {
+            margin-right: 10px;
+            width: 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .page-title {
+            font-size: 22px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .card-title {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+
+        .form-group.small {
+            min-width: 120px;
+        }
+
+        .form-group.large {
+            min-width: 300px;
+            flex: 1;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: #fff;
+        }
+
+        .btn-success:hover {
+            background: #219a52;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: #fff;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        table th,
+        table td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        table th {
+            background: #f8f9fa;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .badge-green {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-yellow {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-blue {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .stat-card .label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-card .unit {
+            font-size: 14px;
+            color: #666;
+            margin-left: 5px;
+        }
+
+        .stat-card.blue {
+            border-left: 4px solid #3498db;
+        }
+
+        .stat-card.green {
+            border-left: 4px solid #27ae60;
+        }
+
+        .stat-card.orange {
+            border-left: 4px solid #e67e22;
+        }
+
+        .stat-card.purple {
+            border-left: 4px solid #9b59b6;
+        }
+
+        .service-table {
+            margin-top: 15px;
+        }
+
+        .service-table input {
+            width: 60px;
+            padding: 5px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        .total-row {
+            background: #e8f4fc !important;
+            font-weight: bold;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            color: #2c3e50;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .print-area {
+            background: #fff;
+            padding: 30px;
+            border: 1px solid #ddd;
+        }
+
+        .print-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .print-header h2 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .print-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .print-table th,
+        .print-table td {
+            border: 1px solid #333;
+            padding: 8px;
+        }
+
+        .print-table th {
+            background: #f0f0f0;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .print-area, .print-area * {
+                visibility: visible;
+            }
+            .print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            margin-top: 10px;
+        }
+
+        .calendar-header {
+            background: #3498db;
+            color: #fff;
+            padding: 8px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .calendar-day {
+            background: #fff;
+            border: 1px solid #eee;
+            padding: 5px;
+            min-height: 60px;
+            font-size: 11px;
+        }
+
+        .calendar-day .date {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .calendar-day .service {
+            background: #3498db;
+            color: #fff;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        .calendar-day.sunday .date {
+            color: #e74c3c;
+        }
+
+        .calendar-day.saturday .date {
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>介護保険レセプトコンピュータ</h1>
+        <div class="header-info">
+            <span>事業所番号: 1234567890</span>
+            <span>サンプル介護サービス事業所</span>
+            <span id="currentDate"></span>
+        </div>
+    </div>
+
+    <div class="container">
+        <nav class="sidebar">
+            <ul class="sidebar-menu">
+                <li class="active" onclick="showPage('dashboard')">📊 ダッシュボード</li>
+                <li onclick="showPage('users')">👥 利用者管理</li>
+                <li onclick="showPage('service-input')">📝 サービス実績入力</li>
+                <li onclick="showPage('care-plan')">📋 ケアプラン管理</li>
+                <li onclick="showPage('billing')">💴 請求処理</li>
+                <li onclick="showPage('reports')">📄 帳票出力</li>
+                <li onclick="showPage('master')">⚙️ マスタ管理</li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <!-- ダッシュボード -->
+            <div id="dashboard" class="page active">
+                <h2 class="page-title">ダッシュボード</h2>
+
+                <div class="stats-row">
+                    <div class="stat-card blue">
+                        <div class="label">登録利用者数</div>
+                        <div class="value" id="totalUsers">0<span class="unit">名</span></div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="label">今月のサービス提供回数</div>
+                        <div class="value" id="totalServices">0<span class="unit">回</span></div>
+                    </div>
+                    <div class="stat-card orange">
+                        <div class="label">今月の請求予定額</div>
+                        <div class="value" id="totalBilling">0<span class="unit">円</span></div>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="label">未請求件数</div>
+                        <div class="value" id="unbilledCount">0<span class="unit">件</span></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">今月のサービス提供状況</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>利用者名</th>
+                                <th>要介護度</th>
+                                <th>サービス種類</th>
+                                <th>提供回数</th>
+                                <th>単位数</th>
+                                <th>請求状況</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboardTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 利用者管理 -->
+            <div id="users" class="page">
+                <h2 class="page-title">利用者管理</h2>
+
+                <div class="card">
+                    <div class="search-box">
+                        <input type="text" id="userSearch" placeholder="利用者名・被保険者番号で検索...">
+                        <button class="btn btn-primary" onclick="searchUsers()">検索</button>
+                        <button class="btn btn-success" onclick="showUserModal()">+ 新規登録</button>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>被保険者番号</th>
+                                <th>利用者名</th>
+                                <th>生年月日</th>
+                                <th>要介護度</th>
+                                <th>認定有効期間</th>
+                                <th>支給限度額</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- サービス実績入力 -->
+            <div id="service-input" class="page">
+                <h2 class="page-title">サービス実績入力</h2>
+
+                <div class="card">
+                    <h3 class="card-title">利用者選択</h3>
+                    <div class="form-row">
+                        <div class="form-group large">
+                            <label>利用者</label>
+                            <select id="serviceUser" onchange="loadUserServices()">
+                                <option value="">選択してください</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>サービス提供年月</label>
+                            <input type="month" id="serviceMonth" onchange="loadUserServices()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" id="serviceInputArea" style="display: none;">
+                    <h3 class="card-title">サービス実績カレンダー</h3>
+                    <div id="userServiceInfo"></div>
+                    <div class="calendar" id="serviceCalendar"></div>
+
+                    <h3 class="card-title" style="margin-top: 25px;">サービス内容入力</h3>
+                    <table class="service-table">
+                        <thead>
+                            <tr>
+                                <th>サービスコード</th>
+                                <th>サービス内容</th>
+                                <th>単位数</th>
+                                <th>回数</th>
+                                <th>サービス単位数</th>
+                            </tr>
+                        </thead>
+                        <tbody id="serviceInputTable">
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="4" style="text-align: right;">合計単位数</td>
+                                <td id="totalUnits">0</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td colspan="4" style="text-align: right;">支給限度額内単位数</td>
+                                <td id="limitUnits">0</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td colspan="4" style="text-align: right;">限度額超過単位数</td>
+                                <td id="overUnits">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="saveServices()">保存</button>
+                        <button class="btn btn-secondary" onclick="clearServices()">クリア</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ケアプラン管理 -->
+            <div id="care-plan" class="page">
+                <h2 class="page-title">ケアプラン管理</h2>
+
+                <div class="card">
+                    <div class="form-row">
+                        <div class="form-group large">
+                            <label>利用者</label>
+                            <select id="carePlanUser" onchange="loadCarePlan()">
+                                <option value="">選択してください</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" id="carePlanArea" style="display: none;">
+                    <h3 class="card-title">居宅サービス計画書</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>作成日</label>
+                            <input type="date" id="planDate">
+                        </div>
+                        <div class="form-group">
+                            <label>計画期間（開始）</label>
+                            <input type="date" id="planStart">
+                        </div>
+                        <div class="form-group">
+                            <label>計画期間（終了）</label>
+                            <input type="date" id="planEnd">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group large">
+                            <label>利用者及び家族の生活に対する意向</label>
+                            <textarea rows="3" id="planWish"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group large">
+                            <label>総合的な援助の方針</label>
+                            <textarea rows="3" id="planPolicy"></textarea>
+                        </div>
+                    </div>
+
+                    <h4 style="margin: 20px 0 10px;">週間サービス計画</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>サービス種類</th>
+                                <th>月</th>
+                                <th>火</th>
+                                <th>水</th>
+                                <th>木</th>
+                                <th>金</th>
+                                <th>土</th>
+                                <th>日</th>
+                            </tr>
+                        </thead>
+                        <tbody id="weeklyPlanTable">
+                        </tbody>
+                    </table>
+
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="saveCarePlan()">保存</button>
+                        <button class="btn btn-success" onclick="printCarePlan()">印刷</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 請求処理 -->
+            <div id="billing" class="page">
+                <h2 class="page-title">請求処理</h2>
+
+                <div class="card">
+                    <h3 class="card-title">請求データ作成</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>請求年月</label>
+                            <input type="month" id="billingMonth">
+                        </div>
+                        <div class="form-group">
+                            <button class="btn btn-primary" style="margin-top: 22px;" onclick="generateBillingData()">請求データ作成</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" id="billingResult" style="display: none;">
+                    <h3 class="card-title">請求一覧</h3>
+                    <div class="alert alert-info">
+                        請求データを確認し、問題なければ「請求確定」ボタンを押してください。
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>被保険者番号</th>
+                                <th>利用者名</th>
+                                <th>サービス種類</th>
+                                <th>単位数</th>
+                                <th>保険請求額</th>
+                                <th>利用者負担額</th>
+                                <th>状態</th>
+                            </tr>
+                        </thead>
+                        <tbody id="billingTable">
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="4" style="text-align: right;">合計</td>
+                                <td id="totalInsurance">0円</td>
+                                <td id="totalUserCharge">0円</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div class="btn-group">
+                        <button class="btn btn-success" onclick="confirmBilling()">請求確定</button>
+                        <button class="btn btn-primary" onclick="exportCSV()">CSV出力</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 帳票出力 -->
+            <div id="reports" class="page">
+                <h2 class="page-title">帳票出力</h2>
+
+                <div class="card">
+                    <h3 class="card-title">帳票選択</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>帳票種類</label>
+                            <select id="reportType">
+                                <option value="meisai">介護給付費明細書</option>
+                                <option value="seikyu">介護給付費請求書</option>
+                                <option value="riyohyo">サービス利用票</option>
+                                <option value="jisseki">サービス提供票</option>
+                                <option value="ryoshu">領収書</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>対象年月</label>
+                            <input type="month" id="reportMonth">
+                        </div>
+                        <div class="form-group large">
+                            <label>利用者</label>
+                            <select id="reportUser">
+                                <option value="all">全員</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="previewReport()">プレビュー</button>
+                        <button class="btn btn-success" onclick="printReport()">印刷</button>
+                    </div>
+                </div>
+
+                <div class="card" id="reportPreview" style="display: none;">
+                    <h3 class="card-title">プレビュー</h3>
+                    <div class="print-area" id="printArea">
+                        <!-- 帳票プレビュー領域 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- マスタ管理 -->
+            <div id="master" class="page">
+                <h2 class="page-title">マスタ管理</h2>
+
+                <div class="card">
+                    <h3 class="card-title">事業所情報</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>事業所番号</label>
+                            <input type="text" id="jigyoshoNo" value="1234567890">
+                        </div>
+                        <div class="form-group large">
+                            <label>事業所名</label>
+                            <input type="text" id="jigyoshoName" value="サンプル介護サービス事業所">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group large">
+                            <label>所在地</label>
+                            <input type="text" id="jigyoshoAddress" value="東京都千代田区○○1-2-3">
+                        </div>
+                        <div class="form-group">
+                            <label>電話番号</label>
+                            <input type="text" id="jigyoshoTel" value="03-1234-5678">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>サービス種類</label>
+                            <select id="serviceType">
+                                <option value="11">訪問介護</option>
+                                <option value="12">訪問入浴介護</option>
+                                <option value="13">訪問看護</option>
+                                <option value="15">通所介護</option>
+                                <option value="17">通所リハビリテーション</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>地域区分</label>
+                            <select id="areaClass">
+                                <option value="1">1級地（東京23区）</option>
+                                <option value="2">2級地</option>
+                                <option value="3">3級地</option>
+                                <option value="4">4級地</option>
+                                <option value="5">5級地</option>
+                                <option value="6">6級地</option>
+                                <option value="7">7級地</option>
+                                <option value="other">その他</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="saveMaster()">保存</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">サービスコードマスタ</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>サービスコード</th>
+                                <th>サービス内容略称</th>
+                                <th>単位数</th>
+                                <th>算定単位</th>
+                            </tr>
+                        </thead>
+                        <tbody id="serviceCodeTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 利用者登録モーダル -->
+    <div class="modal" id="userModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>利用者登録</h3>
+                <button class="modal-close" onclick="closeUserModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>被保険者番号 *</label>
+                        <input type="text" id="modalHihokenNo" maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label>利用者名 *</label>
+                        <input type="text" id="modalUserName">
+                    </div>
+                    <div class="form-group">
+                        <label>フリガナ *</label>
+                        <input type="text" id="modalUserKana">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>生年月日 *</label>
+                        <input type="date" id="modalBirthDate">
+                    </div>
+                    <div class="form-group">
+                        <label>性別</label>
+                        <select id="modalGender">
+                            <option value="1">男性</option>
+                            <option value="2">女性</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>要介護度 *</label>
+                        <select id="modalCareLevel">
+                            <option value="12">要支援1</option>
+                            <option value="13">要支援2</option>
+                            <option value="21">要介護1</option>
+                            <option value="22">要介護2</option>
+                            <option value="23">要介護3</option>
+                            <option value="24">要介護4</option>
+                            <option value="25">要介護5</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>認定有効期間（開始）*</label>
+                        <input type="date" id="modalCertStart">
+                    </div>
+                    <div class="form-group">
+                        <label>認定有効期間（終了）*</label>
+                        <input type="date" id="modalCertEnd">
+                    </div>
+                    <div class="form-group">
+                        <label>負担割合</label>
+                        <select id="modalBurdenRatio">
+                            <option value="1">1割</option>
+                            <option value="2">2割</option>
+                            <option value="3">3割</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group large">
+                        <label>住所</label>
+                        <input type="text" id="modalAddress">
+                    </div>
+                    <div class="form-group">
+                        <label>電話番号</label>
+                        <input type="text" id="modalTel">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group large">
+                        <label>保険者番号</label>
+                        <input type="text" id="modalHokenshaNo" maxlength="6">
+                    </div>
+                    <div class="form-group large">
+                        <label>保険者名</label>
+                        <input type="text" id="modalHokenshaName">
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="saveUser()">登録</button>
+                    <button class="btn btn-secondary" onclick="closeUserModal()">キャンセル</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // データストア（実際はサーバーサイドDB）
+        let users = [];
+        let services = [];
+        let billingData = [];
+
+        // 要介護度マスタ
+        const careLevelMaster = {
+            '12': { name: '要支援1', limit: 5032 },
+            '13': { name: '要支援2', limit: 10531 },
+            '21': { name: '要介護1', limit: 16765 },
+            '22': { name: '要介護2', limit: 19705 },
+            '23': { name: '要介護3', limit: 27048 },
+            '24': { name: '要介護4', limit: 30938 },
+            '25': { name: '要介護5', limit: 36217 }
+        };
+
+        // サービスコードマスタ（訪問介護の例）
+        const serviceCodeMaster = [
+            { code: '111111', name: '身体介護1', units: 163, unit_type: '回' },
+            { code: '111112', name: '身体介護2', units: 308, unit_type: '回' },
+            { code: '111113', name: '身体介護3', units: 453, unit_type: '回' },
+            { code: '112111', name: '生活援助1', units: 183, unit_type: '回' },
+            { code: '112112', name: '生活援助2', units: 225, unit_type: '回' },
+            { code: '113111', name: '身体生活1', units: 246, unit_type: '回' },
+            { code: '113112', name: '身体生活2', units: 391, unit_type: '回' },
+            { code: '114111', name: '通院等乗降介助', units: 99, unit_type: '回' }
+        ];
+
+        // 単位単価（地域区分1級地の場合）
+        const unitPrice = 11.40;
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeData();
+            updateDashboard();
+            renderServiceCodeTable();
+            setCurrentDate();
+            setDefaultMonth();
+        });
+
+        function setCurrentDate() {
+            const now = new Date();
+            document.getElementById('currentDate').textContent =
+                `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+        }
+
+        function setDefaultMonth() {
+            const now = new Date();
+            const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('serviceMonth').value = month;
+            document.getElementById('billingMonth').value = month;
+            document.getElementById('reportMonth').value = month;
+        }
+
+        function initializeData() {
+            // サンプルデータ
+            users = [
+                {
+                    id: 1,
+                    hihokenNo: 'H0000000001',
+                    name: '山田 太郎',
+                    kana: 'ヤマダ タロウ',
+                    birthDate: '1940-05-15',
+                    gender: '1',
+                    careLevel: '22',
+                    certStart: '2024-04-01',
+                    certEnd: '2025-03-31',
+                    burdenRatio: '1',
+                    address: '東京都新宿区○○1-1-1',
+                    tel: '03-1111-2222',
+                    hokenshaNo: '131001',
+                    hokenshaName: '新宿区'
+                },
+                {
+                    id: 2,
+                    hihokenNo: 'H0000000002',
+                    name: '佐藤 花子',
+                    kana: 'サトウ ハナコ',
+                    birthDate: '1935-08-20',
+                    gender: '2',
+                    careLevel: '23',
+                    certStart: '2024-06-01',
+                    certEnd: '2025-05-31',
+                    burdenRatio: '1',
+                    address: '東京都渋谷区○○2-2-2',
+                    tel: '03-3333-4444',
+                    hokenshaNo: '131024',
+                    hokenshaName: '渋谷区'
+                },
+                {
+                    id: 3,
+                    hihokenNo: 'H0000000003',
+                    name: '鈴木 一郎',
+                    kana: 'スズキ イチロウ',
+                    birthDate: '1942-12-10',
+                    gender: '1',
+                    careLevel: '21',
+                    certStart: '2024-07-01',
+                    certEnd: '2025-06-30',
+                    burdenRatio: '2',
+                    address: '東京都港区○○3-3-3',
+                    tel: '03-5555-6666',
+                    hokenshaNo: '131032',
+                    hokenshaName: '港区'
+                }
+            ];
+
+            // サンプルサービス実績
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            services = [
+                { userId: 1, month: currentMonth, serviceCode: '111111', count: 8 },
+                { userId: 1, month: currentMonth, serviceCode: '112111', count: 4 },
+                { userId: 2, month: currentMonth, serviceCode: '111112', count: 6 },
+                { userId: 2, month: currentMonth, serviceCode: '112112', count: 8 },
+                { userId: 3, month: currentMonth, serviceCode: '111111', count: 4 },
+                { userId: 3, month: currentMonth, serviceCode: '113111', count: 4 }
+            ];
+
+            renderUserTable();
+            updateUserSelects();
+        }
+
+        // ページ切り替え
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.sidebar-menu li').forEach(l => l.classList.remove('active'));
+
+            document.getElementById(pageId).classList.add('active');
+            event.target.classList.add('active');
+
+            if (pageId === 'dashboard') {
+                updateDashboard();
+            }
+        }
+
+        // ダッシュボード更新
+        function updateDashboard() {
+            document.getElementById('totalUsers').innerHTML = users.length + '<span class="unit">名</span>';
+
+            const currentMonth = document.getElementById('serviceMonth')?.value || new Date().toISOString().slice(0, 7);
+            const monthServices = services.filter(s => s.month === currentMonth);
+
+            let totalServiceCount = 0;
+            let totalUnits = 0;
+
+            monthServices.forEach(s => {
+                totalServiceCount += s.count;
+                const code = serviceCodeMaster.find(c => c.code === s.serviceCode);
+                if (code) {
+                    totalUnits += code.units * s.count;
+                }
+            });
+
+            document.getElementById('totalServices').innerHTML = totalServiceCount + '<span class="unit">回</span>';
+
+            const totalAmount = Math.floor(totalUnits * unitPrice);
+            document.getElementById('totalBilling').innerHTML =
+                totalAmount.toLocaleString() + '<span class="unit">円</span>';
+
+            document.getElementById('unbilledCount').innerHTML =
+                users.length + '<span class="unit">件</span>';
+
+            // ダッシュボードテーブル
+            const tbody = document.getElementById('dashboardTable');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const userServices = monthServices.filter(s => s.userId === user.id);
+                let userUnits = 0;
+
+                userServices.forEach(s => {
+                    const code = serviceCodeMaster.find(c => c.code === s.serviceCode);
+                    if (code) {
+                        userUnits += code.units * s.count;
+                    }
+                });
+
+                const serviceCount = userServices.reduce((sum, s) => sum + s.count, 0);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${user.name}</td>
+                    <td>${careLevelMaster[user.careLevel].name}</td>
+                    <td>訪問介護</td>
+                    <td>${serviceCount}回</td>
+                    <td>${userUnits.toLocaleString()}単位</td>
+                    <td><span class="badge badge-yellow">未請求</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 利用者テーブル描画
+        function renderUserTable() {
+            const tbody = document.getElementById('userTable');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const careLevel = careLevelMaster[user.careLevel];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${user.hihokenNo}</td>
+                    <td>${user.name}</td>
+                    <td>${formatDate(user.birthDate)}</td>
+                    <td><span class="badge badge-blue">${careLevel.name}</span></td>
+                    <td>${formatDate(user.certStart)} ～ ${formatDate(user.certEnd)}</td>
+                    <td>${careLevel.limit.toLocaleString()}単位</td>
+                    <td>
+                        <button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;" onclick="editUser(${user.id})">編集</button>
+                        <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteUser(${user.id})">削除</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+        }
+
+        // 利用者選択肢更新
+        function updateUserSelects() {
+            const selects = ['serviceUser', 'carePlanUser', 'reportUser'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+
+                const firstOption = select.options[0];
+                select.innerHTML = '';
+                select.appendChild(firstOption);
+
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.hihokenNo} - ${user.name}`;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        // 利用者モーダル
+        function showUserModal() {
+            document.getElementById('userModal').classList.add('show');
+            clearUserModal();
+        }
+
+        function closeUserModal() {
+            document.getElementById('userModal').classList.remove('show');
+        }
+
+        function clearUserModal() {
+            document.getElementById('modalHihokenNo').value = '';
+            document.getElementById('modalUserName').value = '';
+            document.getElementById('modalUserKana').value = '';
+            document.getElementById('modalBirthDate').value = '';
+            document.getElementById('modalGender').value = '1';
+            document.getElementById('modalCareLevel').value = '21';
+            document.getElementById('modalCertStart').value = '';
+            document.getElementById('modalCertEnd').value = '';
+            document.getElementById('modalBurdenRatio').value = '1';
+            document.getElementById('modalAddress').value = '';
+            document.getElementById('modalTel').value = '';
+            document.getElementById('modalHokenshaNo').value = '';
+            document.getElementById('modalHokenshaName').value = '';
+        }
+
+        function saveUser() {
+            const user = {
+                id: users.length + 1,
+                hihokenNo: document.getElementById('modalHihokenNo').value,
+                name: document.getElementById('modalUserName').value,
+                kana: document.getElementById('modalUserKana').value,
+                birthDate: document.getElementById('modalBirthDate').value,
+                gender: document.getElementById('modalGender').value,
+                careLevel: document.getElementById('modalCareLevel').value,
+                certStart: document.getElementById('modalCertStart').value,
+                certEnd: document.getElementById('modalCertEnd').value,
+                burdenRatio: document.getElementById('modalBurdenRatio').value,
+                address: document.getElementById('modalAddress').value,
+                tel: document.getElementById('modalTel').value,
+                hokenshaNo: document.getElementById('modalHokenshaNo').value,
+                hokenshaName: document.getElementById('modalHokenshaName').value
+            };
+
+            if (!user.hihokenNo || !user.name || !user.birthDate) {
+                alert('必須項目を入力してください。');
+                return;
+            }
+
+            users.push(user);
+            renderUserTable();
+            updateUserSelects();
+            closeUserModal();
+            alert('利用者を登録しました。');
+        }
+
+        function editUser(id) {
+            const user = users.find(u => u.id === id);
+            if (!user) return;
+
+            document.getElementById('modalHihokenNo').value = user.hihokenNo;
+            document.getElementById('modalUserName').value = user.name;
+            document.getElementById('modalUserKana').value = user.kana;
+            document.getElementById('modalBirthDate').value = user.birthDate;
+            document.getElementById('modalGender').value = user.gender;
+            document.getElementById('modalCareLevel').value = user.careLevel;
+            document.getElementById('modalCertStart').value = user.certStart;
+            document.getElementById('modalCertEnd').value = user.certEnd;
+            document.getElementById('modalBurdenRatio').value = user.burdenRatio;
+            document.getElementById('modalAddress').value = user.address;
+            document.getElementById('modalTel').value = user.tel;
+            document.getElementById('modalHokenshaNo').value = user.hokenshaNo;
+            document.getElementById('modalHokenshaName').value = user.hokenshaName;
+
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        function deleteUser(id) {
+            if (confirm('この利用者を削除しますか？')) {
+                users = users.filter(u => u.id !== id);
+                renderUserTable();
+                updateUserSelects();
+            }
+        }
+
+        function searchUsers() {
+            const keyword = document.getElementById('userSearch').value.toLowerCase();
+            const tbody = document.getElementById('userTable');
+            tbody.innerHTML = '';
+
+            const filtered = users.filter(u =>
+                u.name.toLowerCase().includes(keyword) ||
+                u.hihokenNo.toLowerCase().includes(keyword)
+            );
+
+            filtered.forEach(user => {
+                const careLevel = careLevelMaster[user.careLevel];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${user.hihokenNo}</td>
+                    <td>${user.name}</td>
+                    <td>${formatDate(user.birthDate)}</td>
+                    <td><span class="badge badge-blue">${careLevel.name}</span></td>
+                    <td>${formatDate(user.certStart)} ～ ${formatDate(user.certEnd)}</td>
+                    <td>${careLevel.limit.toLocaleString()}単位</td>
+                    <td>
+                        <button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;" onclick="editUser(${user.id})">編集</button>
+                        <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteUser(${user.id})">削除</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // サービス実績入力
+        function loadUserServices() {
+            const userId = parseInt(document.getElementById('serviceUser').value);
+            const month = document.getElementById('serviceMonth').value;
+
+            if (!userId || !month) {
+                document.getElementById('serviceInputArea').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('serviceInputArea').style.display = 'block';
+
+            const user = users.find(u => u.id === userId);
+            const careLevel = careLevelMaster[user.careLevel];
+
+            document.getElementById('userServiceInfo').innerHTML = `
+                <p><strong>${user.name}</strong> (${careLevel.name}) - 支給限度額: ${careLevel.limit.toLocaleString()}単位</p>
+            `;
+
+            renderServiceCalendar(month, userId);
+            renderServiceInputTable(userId, month);
+        }
+
+        function renderServiceCalendar(month, userId) {
+            const calendar = document.getElementById('serviceCalendar');
+            calendar.innerHTML = '';
+
+            const [year, mon] = month.split('-').map(Number);
+            const firstDay = new Date(year, mon - 1, 1);
+            const lastDay = new Date(year, mon, 0);
+            const startDayOfWeek = firstDay.getDay();
+
+            // ヘッダー
+            ['日', '月', '火', '水', '木', '金', '土'].forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-header';
+                header.textContent = day;
+                calendar.appendChild(header);
+            });
+
+            // 空白
+            for (let i = 0; i < startDayOfWeek; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'calendar-day';
+                calendar.appendChild(empty);
+            }
+
+            // 日付
+            const userServices = services.filter(s => s.userId === userId && s.month === month);
+
+            for (let d = 1; d <= lastDay.getDate(); d++) {
+                const dayEl = document.createElement('div');
+                const dayOfWeek = new Date(year, mon - 1, d).getDay();
+                dayEl.className = 'calendar-day';
+                if (dayOfWeek === 0) dayEl.classList.add('sunday');
+                if (dayOfWeek === 6) dayEl.classList.add('saturday');
+
+                dayEl.innerHTML = `<div class="date">${d}</div>`;
+
+                // サービスがある日に表示（サンプル）
+                if (userServices.length > 0 && (d % 3 === 0 || d % 5 === 0)) {
+                    dayEl.innerHTML += `<div class="service">訪問</div>`;
+                }
+
+                calendar.appendChild(dayEl);
+            }
+        }
+
+        function renderServiceInputTable(userId, month) {
+            const tbody = document.getElementById('serviceInputTable');
+            tbody.innerHTML = '';
+
+            const userServices = services.filter(s => s.userId === userId && s.month === month);
+
+            serviceCodeMaster.forEach(code => {
+                const existing = userServices.find(s => s.serviceCode === code.code);
+                const count = existing ? existing.count : 0;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${code.code}</td>
+                    <td>${code.name}</td>
+                    <td>${code.units}</td>
+                    <td><input type="number" min="0" value="${count}" data-code="${code.code}" data-units="${code.units}" onchange="calculateTotals()"></td>
+                    <td class="subtotal">${code.units * count}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            calculateTotals();
+        }
+
+        function calculateTotals() {
+            const userId = parseInt(document.getElementById('serviceUser').value);
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+
+            const careLevel = careLevelMaster[user.careLevel];
+            const limit = careLevel.limit;
+
+            let total = 0;
+            document.querySelectorAll('#serviceInputTable input').forEach(input => {
+                const units = parseInt(input.dataset.units);
+                const count = parseInt(input.value) || 0;
+                const subtotal = units * count;
+                input.closest('tr').querySelector('.subtotal').textContent = subtotal;
+                total += subtotal;
+            });
+
+            document.getElementById('totalUnits').textContent = total;
+            document.getElementById('limitUnits').textContent = Math.min(total, limit);
+            document.getElementById('overUnits').textContent = Math.max(0, total - limit);
+        }
+
+        function saveServices() {
+            const userId = parseInt(document.getElementById('serviceUser').value);
+            const month = document.getElementById('serviceMonth').value;
+
+            // 既存データを削除
+            services = services.filter(s => !(s.userId === userId && s.month === month));
+
+            // 新規データを追加
+            document.querySelectorAll('#serviceInputTable input').forEach(input => {
+                const count = parseInt(input.value) || 0;
+                if (count > 0) {
+                    services.push({
+                        userId: userId,
+                        month: month,
+                        serviceCode: input.dataset.code,
+                        count: count
+                    });
+                }
+            });
+
+            alert('サービス実績を保存しました。');
+            updateDashboard();
+        }
+
+        function clearServices() {
+            document.querySelectorAll('#serviceInputTable input').forEach(input => {
+                input.value = 0;
+            });
+            calculateTotals();
+        }
+
+        // ケアプラン
+        function loadCarePlan() {
+            const userId = parseInt(document.getElementById('carePlanUser').value);
+            if (!userId) {
+                document.getElementById('carePlanArea').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('carePlanArea').style.display = 'block';
+
+            // 週間サービス計画テーブル
+            const tbody = document.getElementById('weeklyPlanTable');
+            tbody.innerHTML = '';
+
+            ['訪問介護（身体）', '訪問介護（生活）', '通所介護', '訪問看護'].forEach(service => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${service}</td>
+                    <td><input type="text" style="width: 60px;"></td>
+                    <td><input type="text" style="width: 60px;"></td>
+                    <td><input type="text" style="width: 60px;"></td>
+                    <td><input type="text" style="width: 60px;"></td>
+                    <td><input type="text" style="width: 60px;"></td>
+                    <td><input type="text" style="width: 60px;"></td>
+                    <td><input type="text" style="width: 60px;"></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function saveCarePlan() {
+            alert('ケアプランを保存しました。');
+        }
+
+        function printCarePlan() {
+            window.print();
+        }
+
+        // 請求処理
+        function generateBillingData() {
+            const month = document.getElementById('billingMonth').value;
+            if (!month) {
+                alert('請求年月を選択してください。');
+                return;
+            }
+
+            document.getElementById('billingResult').style.display = 'block';
+
+            const tbody = document.getElementById('billingTable');
+            tbody.innerHTML = '';
+
+            let totalInsurance = 0;
+            let totalUserCharge = 0;
+
+            users.forEach(user => {
+                const userServices = services.filter(s => s.userId === user.id && s.month === month);
+                if (userServices.length === 0) return;
+
+                let totalUnits = 0;
+                userServices.forEach(s => {
+                    const code = serviceCodeMaster.find(c => c.code === s.serviceCode);
+                    if (code) {
+                        totalUnits += code.units * s.count;
+                    }
+                });
+
+                const careLevel = careLevelMaster[user.careLevel];
+                const limitUnits = Math.min(totalUnits, careLevel.limit);
+                const totalAmount = Math.floor(limitUnits * unitPrice);
+                const burdenRatio = parseInt(user.burdenRatio) / 10;
+                const userCharge = Math.floor(totalAmount * burdenRatio);
+                const insuranceAmount = totalAmount - userCharge;
+
+                totalInsurance += insuranceAmount;
+                totalUserCharge += userCharge;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${user.hihokenNo}</td>
+                    <td>${user.name}</td>
+                    <td>訪問介護</td>
+                    <td>${totalUnits.toLocaleString()}</td>
+                    <td>${insuranceAmount.toLocaleString()}円</td>
+                    <td>${userCharge.toLocaleString()}円</td>
+                    <td><span class="badge badge-yellow">未確定</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('totalInsurance').textContent = totalInsurance.toLocaleString() + '円';
+            document.getElementById('totalUserCharge').textContent = totalUserCharge.toLocaleString() + '円';
+        }
+
+        function confirmBilling() {
+            if (confirm('請求を確定しますか？確定後は修正できません。')) {
+                document.querySelectorAll('#billingTable .badge').forEach(badge => {
+                    badge.className = 'badge badge-green';
+                    badge.textContent = '確定済';
+                });
+                alert('請求を確定しました。');
+            }
+        }
+
+        function exportCSV() {
+            let csv = '被保険者番号,利用者名,サービス種類,単位数,保険請求額,利用者負担額\n';
+
+            document.querySelectorAll('#billingTable tr').forEach(tr => {
+                const cells = tr.querySelectorAll('td');
+                if (cells.length > 0) {
+                    const row = [
+                        cells[0].textContent,
+                        cells[1].textContent,
+                        cells[2].textContent,
+                        cells[3].textContent,
+                        cells[4].textContent,
+                        cells[5].textContent
+                    ].join(',');
+                    csv += row + '\n';
+                }
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `請求データ_${document.getElementById('billingMonth').value}.csv`;
+            link.click();
+        }
+
+        // 帳票出力
+        function previewReport() {
+            const reportType = document.getElementById('reportType').value;
+            const month = document.getElementById('reportMonth').value;
+            const userId = document.getElementById('reportUser').value;
+
+            if (!month) {
+                alert('対象年月を選択してください。');
+                return;
+            }
+
+            document.getElementById('reportPreview').style.display = 'block';
+            const printArea = document.getElementById('printArea');
+
+            if (reportType === 'meisai') {
+                renderMeisai(printArea, month, userId);
+            } else if (reportType === 'seikyu') {
+                renderSeikyu(printArea, month);
+            } else if (reportType === 'ryoshu') {
+                renderRyoshu(printArea, month, userId);
+            }
+        }
+
+        function renderMeisai(container, month, userId) {
+            const targetUsers = userId === 'all' ? users : users.filter(u => u.id === parseInt(userId));
+            if (targetUsers.length === 0) return;
+
+            const user = targetUsers[0];
+            const careLevel = careLevelMaster[user.careLevel];
+            const userServices = services.filter(s => s.userId === user.id && s.month === month);
+
+            let serviceRows = '';
+            let totalUnits = 0;
+
+            userServices.forEach(s => {
+                const code = serviceCodeMaster.find(c => c.code === s.serviceCode);
+                if (code) {
+                    const subtotal = code.units * s.count;
+                    totalUnits += subtotal;
+                    serviceRows += `
+                        <tr>
+                            <td>${code.code}</td>
+                            <td>${code.name}</td>
+                            <td style="text-align: right;">${code.units}</td>
+                            <td style="text-align: right;">${s.count}</td>
+                            <td style="text-align: right;">${subtotal}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            const totalAmount = Math.floor(totalUnits * unitPrice);
+            const burdenRatio = parseInt(user.burdenRatio) / 10;
+            const userCharge = Math.floor(totalAmount * burdenRatio);
+            const insuranceAmount = totalAmount - userCharge;
+
+            container.innerHTML = `
+                <div class="print-header">
+                    <h2>介護給付費明細書</h2>
+                    <p>サービス提供年月: ${month.replace('-', '年')}月</p>
+                </div>
+
+                <div class="print-info">
+                    <div>
+                        <p><strong>事業所番号:</strong> 1234567890</p>
+                        <p><strong>事業所名:</strong> サンプル介護サービス事業所</p>
+                    </div>
+                    <div>
+                        <p><strong>保険者番号:</strong> ${user.hokenshaNo}</p>
+                        <p><strong>保険者名:</strong> ${user.hokenshaName}</p>
+                    </div>
+                </div>
+
+                <table class="print-table">
+                    <tr>
+                        <th>被保険者番号</th>
+                        <td>${user.hihokenNo}</td>
+                        <th>被保険者氏名</th>
+                        <td>${user.name}</td>
+                    </tr>
+                    <tr>
+                        <th>生年月日</th>
+                        <td>${formatDate(user.birthDate)}</td>
+                        <th>要介護状態区分</th>
+                        <td>${careLevel.name}</td>
+                    </tr>
+                    <tr>
+                        <th>認定有効期間</th>
+                        <td colspan="3">${formatDate(user.certStart)} ～ ${formatDate(user.certEnd)}</td>
+                    </tr>
+                </table>
+
+                <h4 style="margin: 20px 0 10px;">サービス内容</h4>
+                <table class="print-table">
+                    <thead>
+                        <tr>
+                            <th>サービスコード</th>
+                            <th>サービス内容</th>
+                            <th>単位数</th>
+                            <th>回数</th>
+                            <th>サービス単位数</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${serviceRows}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="4" style="text-align: right;">合計単位数</th>
+                            <td style="text-align: right;"><strong>${totalUnits}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <table class="print-table" style="margin-top: 20px;">
+                    <tr>
+                        <th>支給限度基準額</th>
+                        <td style="text-align: right;">${careLevel.limit.toLocaleString()} 単位</td>
+                    </tr>
+                    <tr>
+                        <th>単位数単価</th>
+                        <td style="text-align: right;">${unitPrice} 円</td>
+                    </tr>
+                    <tr>
+                        <th>保険請求額</th>
+                        <td style="text-align: right;">${insuranceAmount.toLocaleString()} 円</td>
+                    </tr>
+                    <tr>
+                        <th>利用者負担額（${user.burdenRatio}割）</th>
+                        <td style="text-align: right;">${userCharge.toLocaleString()} 円</td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function renderSeikyu(container, month) {
+            let totalUnits = 0;
+            let totalInsurance = 0;
+            let totalUserCharge = 0;
+            let userCount = 0;
+
+            users.forEach(user => {
+                const userServices = services.filter(s => s.userId === user.id && s.month === month);
+                if (userServices.length === 0) return;
+
+                userCount++;
+                let units = 0;
+                userServices.forEach(s => {
+                    const code = serviceCodeMaster.find(c => c.code === s.serviceCode);
+                    if (code) {
+                        units += code.units * s.count;
+                    }
+                });
+
+                totalUnits += units;
+                const amount = Math.floor(units * unitPrice);
+                const burdenRatio = parseInt(user.burdenRatio) / 10;
+                const userCharge = Math.floor(amount * burdenRatio);
+                totalInsurance += amount - userCharge;
+                totalUserCharge += userCharge;
+            });
+
+            container.innerHTML = `
+                <div class="print-header">
+                    <h2>介護給付費請求書</h2>
+                    <p>サービス提供年月: ${month.replace('-', '年')}月</p>
+                </div>
+
+                <table class="print-table">
+                    <tr>
+                        <th>事業所番号</th>
+                        <td>1234567890</td>
+                    </tr>
+                    <tr>
+                        <th>事業所名称</th>
+                        <td>サンプル介護サービス事業所</td>
+                    </tr>
+                    <tr>
+                        <th>所在地</th>
+                        <td>東京都千代田区○○1-2-3</td>
+                    </tr>
+                    <tr>
+                        <th>サービス種類</th>
+                        <td>訪問介護</td>
+                    </tr>
+                </table>
+
+                <h4 style="margin: 20px 0 10px;">請求内容</h4>
+                <table class="print-table">
+                    <tr>
+                        <th>件数</th>
+                        <td style="text-align: right;">${userCount} 件</td>
+                    </tr>
+                    <tr>
+                        <th>単位数</th>
+                        <td style="text-align: right;">${totalUnits.toLocaleString()} 単位</td>
+                    </tr>
+                    <tr>
+                        <th>保険請求額</th>
+                        <td style="text-align: right;"><strong>${totalInsurance.toLocaleString()} 円</strong></td>
+                    </tr>
+                    <tr>
+                        <th>利用者負担額</th>
+                        <td style="text-align: right;">${totalUserCharge.toLocaleString()} 円</td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function renderRyoshu(container, month, userId) {
+            const targetUsers = userId === 'all' ? users : users.filter(u => u.id === parseInt(userId));
+            if (targetUsers.length === 0) return;
+
+            const user = targetUsers[0];
+            const userServices = services.filter(s => s.userId === user.id && s.month === month);
+
+            let totalUnits = 0;
+            userServices.forEach(s => {
+                const code = serviceCodeMaster.find(c => c.code === s.serviceCode);
+                if (code) {
+                    totalUnits += code.units * s.count;
+                }
+            });
+
+            const totalAmount = Math.floor(totalUnits * unitPrice);
+            const burdenRatio = parseInt(user.burdenRatio) / 10;
+            const userCharge = Math.floor(totalAmount * burdenRatio);
+
+            const today = new Date();
+
+            container.innerHTML = `
+                <div class="print-header">
+                    <h2>領 収 書</h2>
+                </div>
+
+                <div style="text-align: right; margin-bottom: 20px;">
+                    <p>発行日: ${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日</p>
+                    <p>No. ${Math.floor(Math.random() * 10000)}</p>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <p style="font-size: 18px;"><strong>${user.name}</strong> 様</p>
+                </div>
+
+                <div style="text-align: center; margin: 30px 0; padding: 20px; border: 2px solid #333;">
+                    <p style="font-size: 14px;">金額</p>
+                    <p style="font-size: 28px; font-weight: bold;">¥ ${userCharge.toLocaleString()}-</p>
+                </div>
+
+                <table class="print-table">
+                    <tr>
+                        <th>サービス提供年月</th>
+                        <td>${month.replace('-', '年')}月</td>
+                    </tr>
+                    <tr>
+                        <th>サービス種類</th>
+                        <td>訪問介護</td>
+                    </tr>
+                    <tr>
+                        <th>保険給付額</th>
+                        <td style="text-align: right;">${(totalAmount - userCharge).toLocaleString()} 円</td>
+                    </tr>
+                    <tr>
+                        <th>利用者負担額（${user.burdenRatio}割）</th>
+                        <td style="text-align: right;">${userCharge.toLocaleString()} 円</td>
+                    </tr>
+                </table>
+
+                <div style="margin-top: 40px;">
+                    <p>上記の金額を領収いたしました。</p>
+                </div>
+
+                <div style="margin-top: 40px; text-align: right;">
+                    <p>事業所番号: 1234567890</p>
+                    <p><strong>サンプル介護サービス事業所</strong></p>
+                    <p>東京都千代田区○○1-2-3</p>
+                    <p>TEL: 03-1234-5678</p>
+                </div>
+            `;
+        }
+
+        function printReport() {
+            window.print();
+        }
+
+        // サービスコードテーブル
+        function renderServiceCodeTable() {
+            const tbody = document.getElementById('serviceCodeTable');
+            tbody.innerHTML = '';
+
+            serviceCodeMaster.forEach(code => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${code.code}</td>
+                    <td>${code.name}</td>
+                    <td>${code.units}</td>
+                    <td>${code.unit_type}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function saveMaster() {
+            alert('事業所情報を保存しました。');
+        }
+    </script>
+</body>
+</html>

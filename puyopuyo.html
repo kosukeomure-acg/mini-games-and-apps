@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ぷよぷよ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a0a2e 0%, #2d1b4e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .main-board {
+            background: linear-gradient(180deg, #2a1a4a 0%, #1a0a2a 100%);
+            border: 4px solid #8844aa;
+            border-radius: 15px;
+            padding: 10px;
+            box-shadow: 0 0 40px rgba(136, 68, 170, 0.5);
+        }
+
+        #gameCanvas {
+            display: block;
+            background: #0a0a1a;
+            border-radius: 5px;
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .info-box {
+            background: linear-gradient(180deg, #2a1a4a 0%, #1a0a2a 100%);
+            border: 3px solid #8844aa;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            color: #fff;
+            min-width: 140px;
+        }
+
+        .info-box h3 {
+            color: #cc88ff;
+            font-size: 12px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .info-box .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffcc00;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+        }
+
+        #nextCanvas {
+            display: block;
+            margin: 0 auto;
+            background: #0a0a1a;
+            border-radius: 5px;
+        }
+
+        .controls {
+            background: linear-gradient(180deg, #2a1a4a 0%, #1a0a2a 100%);
+            border: 3px solid #8844aa;
+            border-radius: 12px;
+            padding: 15px;
+            color: #aaa;
+            font-size: 11px;
+        }
+
+        .controls h3 {
+            color: #cc88ff;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .controls p {
+            margin: 4px 0;
+        }
+
+        .controls span {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+
+        .chain-display {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 72px;
+            font-weight: bold;
+            color: #ffcc00;
+            text-shadow: 0 0 20px #ff6600, 0 0 40px #ff0000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+
+        .chain-display.show {
+            opacity: 1;
+            animation: chainPop 0.5s ease-out;
+        }
+
+        @keyframes chainPop {
+            0% { transform: translate(-50%, -50%) scale(0.5); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            color: #fff;
+            display: none;
+            z-index: 200;
+            border: 3px solid #8844aa;
+        }
+
+        .game-over h2 {
+            color: #ff4488;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .game-over p {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #ccc;
+        }
+
+        .game-over .final-score {
+            font-size: 28px;
+            color: #ffcc00;
+            margin-bottom: 25px;
+        }
+
+        .game-over button {
+            background: linear-gradient(180deg, #aa44ff 0%, #6622aa 100%);
+            color: #fff;
+            border: none;
+            padding: 15px 35px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .game-over button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(170, 68, 255, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="main-board">
+            <canvas id="gameCanvas" width="240" height="480"></canvas>
+        </div>
+        <div class="side-panel">
+            <div class="info-box">
+                <h3>スコア</h3>
+                <div class="value" id="score">0</div>
+            </div>
+            <div class="info-box">
+                <h3>連鎖</h3>
+                <div class="value" id="chain">0</div>
+            </div>
+            <div class="info-box">
+                <h3>最大連鎖</h3>
+                <div class="value" id="maxChain">0</div>
+            </div>
+            <div class="info-box">
+                <h3>次のぷよ</h3>
+                <canvas id="nextCanvas" width="80" height="80"></canvas>
+            </div>
+            <div class="controls">
+                <h3>操作方法</h3>
+                <p><span>←→</span> 左右移動</p>
+                <p><span>↑</span> 右回転</p>
+                <p><span>Z</span> 左回転</p>
+                <p><span>↓</span> 高速落下</p>
+                <p><span>Space</span> 即落下</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="chain-display" id="chainDisplay"></div>
+
+    <div class="game-over" id="gameOver">
+        <h2>ゲームオーバー</h2>
+        <p>おつかれさまでした！</p>
+        <div class="final-score">
+            スコア: <span id="finalScore">0</span><br>
+            最大連鎖: <span id="finalChain">0</span>
+        </div>
+        <button onclick="restartGame()">もう一度プレイ</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('nextCanvas');
+        const nextCtx = nextCanvas.getContext('2d');
+
+        // ゲーム設定
+        const COLS = 6;
+        const ROWS = 12;
+        const HIDDEN_ROWS = 1;
+        const BLOCK_SIZE = 40;
+
+        // ぷよの色
+        const COLORS = {
+            0: null,
+            1: { main: '#ff4444', light: '#ff8888', dark: '#aa2222' }, // 赤
+            2: { main: '#44ff44', light: '#88ff88', dark: '#22aa22' }, // 緑
+            3: { main: '#4444ff', light: '#8888ff', dark: '#2222aa' }, // 青
+            4: { main: '#ffff44', light: '#ffff88', dark: '#aaaa22' }, // 黄
+            5: { main: '#ff44ff', light: '#ff88ff', dark: '#aa22aa' }  // 紫
+        };
+
+        // ゲーム状態
+        let board = [];
+        let score = 0;
+        let currentChain = 0;
+        let maxChain = 0;
+        let gameOver = false;
+        let currentPuyo = null;
+        let nextPuyo = null;
+        let dropCounter = 0;
+        let lastTime = 0;
+        let isProcessing = false;
+        let dropSpeed = 500;
+
+        // ぷよペアの状態
+        // rotation: 0=上, 1=右, 2=下, 3=左 (子ぷよの位置)
+        function createPuyo() {
+            return {
+                mainColor: Math.floor(Math.random() * 5) + 1,
+                subColor: Math.floor(Math.random() * 5) + 1,
+                x: 2,
+                y: 0,
+                rotation: 0
+            };
+        }
+
+        function getSubPuyoPos(puyo) {
+            const offsets = [
+                { x: 0, y: -1 }, // 上
+                { x: 1, y: 0 },  // 右
+                { x: 0, y: 1 },  // 下
+                { x: -1, y: 0 }  // 左
+            ];
+            return {
+                x: puyo.x + offsets[puyo.rotation].x,
+                y: puyo.y + offsets[puyo.rotation].y
+            };
+        }
+
+        function createBoard() {
+            return Array.from({ length: ROWS + HIDDEN_ROWS }, () => Array(COLS).fill(0));
+        }
+
+        // 衝突判定
+        function canMove(puyo, dx, dy, newRotation = puyo.rotation) {
+            const newX = puyo.x + dx;
+            const newY = puyo.y + dy;
+            const tempPuyo = { ...puyo, x: newX, y: newY, rotation: newRotation };
+            const subPos = getSubPuyoPos(tempPuyo);
+
+            // メインぷよのチェック
+            if (newX < 0 || newX >= COLS || newY >= ROWS + HIDDEN_ROWS) return false;
+            if (newY >= 0 && board[newY][newX] !== 0) return false;
+
+            // サブぷよのチェック
+            if (subPos.x < 0 || subPos.x >= COLS || subPos.y >= ROWS + HIDDEN_ROWS) return false;
+            if (subPos.y >= 0 && board[subPos.y][subPos.x] !== 0) return false;
+
+            return true;
+        }
+
+        // 回転
+        function rotatePuyo(direction) {
+            let newRotation = (currentPuyo.rotation + direction + 4) % 4;
+
+            if (canMove(currentPuyo, 0, 0, newRotation)) {
+                currentPuyo.rotation = newRotation;
+                return;
+            }
+
+            // 壁キック
+            const kicks = [
+                { x: 1, y: 0 }, { x: -1, y: 0 },
+                { x: 0, y: -1 }, { x: 0, y: 1 }
+            ];
+
+            for (const kick of kicks) {
+                if (canMove(currentPuyo, kick.x, kick.y, newRotation)) {
+                    currentPuyo.x += kick.x;
+                    currentPuyo.y += kick.y;
+                    currentPuyo.rotation = newRotation;
+                    return;
+                }
+            }
+        }
+
+        // ぷよを固定
+        function lockPuyo() {
+            const subPos = getSubPuyoPos(currentPuyo);
+
+            // メインぷよを落下
+            let mainY = currentPuyo.y;
+            while (mainY < ROWS + HIDDEN_ROWS - 1 && board[mainY + 1][currentPuyo.x] === 0) {
+                mainY++;
+            }
+            if (mainY >= 0) board[mainY][currentPuyo.x] = currentPuyo.mainColor;
+
+            // サブぷよを落下
+            let subY = subPos.y;
+            while (subY < ROWS + HIDDEN_ROWS - 1 && board[subY + 1][subPos.x] === 0) {
+                subY++;
+            }
+            if (subY >= 0) board[subY][subPos.x] = currentPuyo.subColor;
+
+            // ゲームオーバー判定（3列目の一番上がふさがれている場合）
+            if (board[HIDDEN_ROWS][2] !== 0) {
+                gameOver = true;
+                showGameOver();
+                return;
+            }
+
+            currentChain = 0;
+            processChains();
+        }
+
+        // 連鎖処理
+        async function processChains() {
+            isProcessing = true;
+
+            while (true) {
+                await applyGravity();
+                await sleep(100);
+
+                const groups = findConnectedGroups();
+                if (groups.length === 0) break;
+
+                currentChain++;
+                if (currentChain > maxChain) {
+                    maxChain = currentChain;
+                }
+
+                showChainDisplay(currentChain);
+
+                // スコア計算
+                let puyoCount = 0;
+                for (const group of groups) {
+                    puyoCount += group.length;
+                    for (const pos of group) {
+                        board[pos.y][pos.x] = 0;
+                    }
+                }
+
+                const chainBonus = getChainBonus(currentChain);
+                score += puyoCount * 10 * chainBonus;
+                updateDisplay();
+
+                await sleep(300);
+            }
+
+            isProcessing = false;
+            spawnNewPuyo();
+        }
+
+        // 重力適用
+        async function applyGravity() {
+            let moved = true;
+            while (moved) {
+                moved = false;
+                for (let x = 0; x < COLS; x++) {
+                    for (let y = ROWS + HIDDEN_ROWS - 2; y >= 0; y--) {
+                        if (board[y][x] !== 0 && board[y + 1][x] === 0) {
+                            board[y + 1][x] = board[y][x];
+                            board[y][x] = 0;
+                            moved = true;
+                        }
+                    }
+                }
+                if (moved) {
+                    draw();
+                    await sleep(30);
+                }
+            }
+        }
+
+        // 連結グループを探す
+        function findConnectedGroups() {
+            const visited = Array.from({ length: ROWS + HIDDEN_ROWS }, () => Array(COLS).fill(false));
+            const groups = [];
+
+            for (let y = HIDDEN_ROWS; y < ROWS + HIDDEN_ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] !== 0 && !visited[y][x]) {
+                        const group = [];
+                        const color = board[y][x];
+                        floodFill(x, y, color, visited, group);
+
+                        if (group.length >= 4) {
+                            groups.push(group);
+                        }
+                    }
+                }
+            }
+
+            return groups;
+        }
+
+        function floodFill(x, y, color, visited, group) {
+            if (x < 0 || x >= COLS || y < 0 || y >= ROWS + HIDDEN_ROWS) return;
+            if (visited[y][x] || board[y][x] !== color) return;
+
+            visited[y][x] = true;
+            group.push({ x, y });
+
+            floodFill(x + 1, y, color, visited, group);
+            floodFill(x - 1, y, color, visited, group);
+            floodFill(x, y + 1, color, visited, group);
+            floodFill(x, y - 1, color, visited, group);
+        }
+
+        function getChainBonus(chain) {
+            const bonuses = [0, 1, 8, 16, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 480, 512];
+            return bonuses[Math.min(chain, bonuses.length - 1)] || 512;
+        }
+
+        function showChainDisplay(chain) {
+            const display = document.getElementById('chainDisplay');
+            const chainNames = ['', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+            display.textContent = chain + '連鎖！';
+            display.classList.add('show');
+            setTimeout(() => display.classList.remove('show'), 500);
+        }
+
+        function spawnNewPuyo() {
+            currentPuyo = nextPuyo;
+            nextPuyo = createPuyo();
+            drawNext();
+
+            if (!canMove(currentPuyo, 0, 0)) {
+                gameOver = true;
+                showGameOver();
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // 描画
+        function drawPuyoCell(ctx, x, y, colorData, size, offsetX = 0, offsetY = 0) {
+            if (!colorData) return;
+
+            const centerX = offsetX + x * size + size / 2;
+            const centerY = offsetY + y * size + size / 2;
+            const radius = size / 2 - 2;
+
+            // メインの円
+            const gradient = ctx.createRadialGradient(
+                centerX - radius * 0.3, centerY - radius * 0.3, 0,
+                centerX, centerY, radius
+            );
+            gradient.addColorStop(0, colorData.light);
+            gradient.addColorStop(0.7, colorData.main);
+            gradient.addColorStop(1, colorData.dark);
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // ハイライト
+            ctx.beginPath();
+            ctx.arc(centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.25, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.fill();
+
+            // 目
+            const eyeOffsetX = radius * 0.25;
+            const eyeOffsetY = radius * 0.1;
+            const eyeRadius = radius * 0.15;
+
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(centerX - eyeOffsetX, centerY - eyeOffsetY, eyeRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(centerX + eyeOffsetX, centerY - eyeOffsetY, eyeRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(centerX - eyeOffsetX, centerY - eyeOffsetY, eyeRadius * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(centerX + eyeOffsetX, centerY - eyeOffsetY, eyeRadius * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#0a0a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // グリッド
+            ctx.strokeStyle = '#1a1a3a';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= COLS; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * BLOCK_SIZE, 0);
+                ctx.lineTo(x * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= ROWS; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, y * BLOCK_SIZE);
+                ctx.stroke();
+            }
+
+            // ボード上のぷよ
+            for (let y = HIDDEN_ROWS; y < ROWS + HIDDEN_ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] !== 0) {
+                        drawPuyoCell(ctx, x, y - HIDDEN_ROWS, COLORS[board[y][x]], BLOCK_SIZE);
+                    }
+                }
+            }
+        }
+
+        function drawCurrentPuyo() {
+            if (!currentPuyo || isProcessing) return;
+
+            const subPos = getSubPuyoPos(currentPuyo);
+
+            // メインぷよ
+            if (currentPuyo.y >= HIDDEN_ROWS) {
+                drawPuyoCell(ctx, currentPuyo.x, currentPuyo.y - HIDDEN_ROWS, COLORS[currentPuyo.mainColor], BLOCK_SIZE);
+            }
+
+            // サブぷよ
+            if (subPos.y >= HIDDEN_ROWS) {
+                drawPuyoCell(ctx, subPos.x, subPos.y - HIDDEN_ROWS, COLORS[currentPuyo.subColor], BLOCK_SIZE);
+            }
+        }
+
+        function drawNext() {
+            nextCtx.fillStyle = '#0a0a1a';
+            nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+
+            if (!nextPuyo) return;
+
+            const size = 35;
+            const offsetX = (nextCanvas.width - size) / 2;
+            const offsetY = 5;
+
+            drawPuyoCell(nextCtx, 0, 0, COLORS[nextPuyo.subColor], size, offsetX, offsetY);
+            drawPuyoCell(nextCtx, 0, 1, COLORS[nextPuyo.mainColor], size, offsetX, offsetY);
+        }
+
+        function draw() {
+            drawBoard();
+            drawCurrentPuyo();
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('chain').textContent = currentChain;
+            document.getElementById('maxChain').textContent = maxChain;
+        }
+
+        function showGameOver() {
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalChain').textContent = maxChain;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        function restartGame() {
+            board = createBoard();
+            score = 0;
+            currentChain = 0;
+            maxChain = 0;
+            gameOver = false;
+            isProcessing = false;
+            currentPuyo = createPuyo();
+            nextPuyo = createPuyo();
+            document.getElementById('gameOver').style.display = 'none';
+            updateDisplay();
+            drawNext();
+            lastTime = 0;
+            requestAnimationFrame(gameLoop);
+        }
+
+        // キー入力
+        document.addEventListener('keydown', (e) => {
+            if (gameOver || isProcessing || !currentPuyo) return;
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                    if (canMove(currentPuyo, -1, 0)) {
+                        currentPuyo.x--;
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (canMove(currentPuyo, 1, 0)) {
+                        currentPuyo.x++;
+                    }
+                    break;
+                case 'ArrowDown':
+                    if (canMove(currentPuyo, 0, 1)) {
+                        currentPuyo.y++;
+                    }
+                    break;
+                case 'ArrowUp':
+                    rotatePuyo(1);
+                    break;
+                case 'z':
+                case 'Z':
+                    rotatePuyo(-1);
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    while (canMove(currentPuyo, 0, 1)) {
+                        currentPuyo.y++;
+                    }
+                    lockPuyo();
+                    break;
+            }
+            draw();
+        });
+
+        // ゲームループ
+        function gameLoop(time = 0) {
+            if (gameOver) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            if (!isProcessing && currentPuyo) {
+                dropCounter += deltaTime;
+
+                if (dropCounter > dropSpeed) {
+                    if (canMove(currentPuyo, 0, 1)) {
+                        currentPuyo.y++;
+                    } else {
+                        lockPuyo();
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 初期化
+        function init() {
+            board = createBoard();
+            currentPuyo = createPuyo();
+            nextPuyo = createPuyo();
+            updateDisplay();
+            drawNext();
+            requestAnimationFrame(gameLoop);
+        }
+
+        init();
+    </script>
+</body>
+</html>
