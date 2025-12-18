@@ -2,12 +2,16 @@
 
 ブラウザで動作するミニゲームとアプリケーションのコレクション。
 
+## 公開URL
+
+**https://mini-games-web-app.web.app**
+
 ## ゲーム一覧
 
 ### テトリス (Tetris)
 クラシックなテトリスゲームをHTML5 Canvasで実装。
 
-**ファイル**: `tetris.html`
+**プレイ**: https://mini-games-web-app.web.app/tetris.html
 
 **操作方法**:
 | キー | アクション |
@@ -29,19 +33,58 @@
 
 設計書やドキュメントは `docs/` フォルダにあります。
 
-- [テトリス設計書](docs/tetris-design.md)
+| ドキュメント | 説明 |
+|------------|------|
+| [プロジェクト概要](docs/project-overview.md) | プロジェクト全体の概要 |
+| [テトリス設計書](docs/tetris-design.md) | テトリスゲームの詳細設計 |
+| [デプロイ手順書](docs/deployment-guide.md) | Firebase Hostingへのデプロイ方法 |
+| [インフラ構成図](docs/infrastructure.md) | システム構成と依存関係 |
 
 ## 技術スタック
 
+### フロントエンド
 - HTML5
 - CSS3
 - JavaScript (ES6+)
 - Canvas API
 
-## 使い方
+### インフラ
+- Firebase Hosting
+- Google Cloud Platform
 
-1. 任意のHTMLファイルをブラウザで開く
-2. ゲームを楽しむ
+## ローカル開発
+
+### 前提条件
+- Node.js (v18以上)
+- Firebase CLI
+
+### セットアップ
+
+```bash
+# Firebase CLIのインストール
+npm install -g firebase-tools
+
+# Firebaseにログイン
+firebase login
+
+# ローカルサーバー起動
+firebase serve --only hosting
+```
+
+ブラウザで http://localhost:5000 にアクセス。
+
+### デプロイ
+
+```bash
+firebase deploy --only hosting
+```
+
+## プロジェクト情報
+
+| 項目 | 値 |
+|-----|-----|
+| GCPプロジェクトID | mini-games-web-app |
+| Firebaseコンソール | [リンク](https://console.firebase.google.com/project/mini-games-web-app/overview) |
 
 ## ライセンス
 
